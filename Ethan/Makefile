@@ -17,7 +17,7 @@ INCLUDES = -I $(CG_INSTALL)/include \
 LIBDIRS =  -L $(CG_INSTALL)/lib
 
 # Link to the libraries we need
-LIBS =     
+LIBS =     -l tangramgeneric \
 		   -l tangramgenericapi \
 		   -l tangramlmcpserializer \
 		   -l tangram_transport \

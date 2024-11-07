@@ -88,12 +88,6 @@ uint8_t recvEitherMessage(
         std::cout << "Deserialized " << msg1.getName() << std::endl;
         return 1;
     }
-    /*
-    if (ser.deserialize(buffer, msg2)) {
-        std::cout << "Deserialized " << msg2.getName() << std::endl;
-        return 2;
-    }
-    */
 
     return 0;
 }
@@ -172,8 +166,7 @@ int main(int argc, char **argv) {
 
     // Subscribe to the topic that the message will come in on
     rx->subscribe("hi.ethanToMichael");
-    //rx->subscribe("afrl.cmasi.GoToWaypointAction");
-    //rx->subscribe("afrl.cmasi.CameraAction");
+
 
     // Give the transport time to initialize & connect to the proxy
     std::this_thread::sleep_for(10ms);
@@ -181,9 +174,7 @@ int main(int argc, char **argv) {
     // Message handling
     std::cout << "Waiting for first message..." << std::endl;
 
-    //afrl::cmasi::MissionCommand mc;
-    //afrl::cmasi::CameraAction ca;
-    
+
     //auto msgid = recvEitherMessage(e2m, ca, rx, serializer);
     hi::ethanToMichael e2m;
     auto msgid = recvEitherMessage(e2m, rx, serializer);

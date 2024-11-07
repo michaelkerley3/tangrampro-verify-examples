@@ -10,13 +10,14 @@ INCLUDES = -I $(CG_INSTALL)/include \
 		   -I $(CG_INSTALL)/include/tangramgenericapi/include \
 		   -I $(CG_INSTALL)/include/tangramgenericapicpp \
 		   -I $(CG_INSTALL)/include/tangramlmcpserializer \
-		   -I $(CG_INSTALL)/include/tangramTransports/base
+		   -I $(CG_INSTALL)/include/tangramTransports/base \
+		   -I $(CODEGEN)/include
 
 # Include directories where Tangram libraries can be found
 LIBDIRS =  -L $(CG_INSTALL)/lib
 
 # Link to the libraries we need
-LIBS =     -l tangramgeneric \
+LIBS =     
 		   -l tangramgenericapi \
 		   -l tangramlmcpserializer \
 		   -l tangram_transport \
@@ -26,11 +27,10 @@ LIBS =     -l tangramgeneric \
 NAME = simple
 
 # Build the executable
-.PHONY: all
+.PHONY: allltangramgeneric
 all: main.cpp
 	$(CXX) $(INCLUDES) -o $(NAME) main.cpp $(LIBDIRS) $(LIBS)
 
 .PHONY: clean
 clean:
 	rm -rf $(NAME)
-

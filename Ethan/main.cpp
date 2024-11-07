@@ -4,19 +4,32 @@
 #include <thread>
 
 // Tangram Pro-generated serializer and transport
+/*
 #include "Serializer.hpp"
 #include "TangramTransportTypes.h"
 #include "afrl_cmasi_DerivedEntityFactory.hpp"
 #include "TangramTransport.hpp"
 #include "LMCPSerializer.hpp"
+*/
+#include "Serializer.hpp"
+#include "TangramTransportTypes.h"
+#include "hi_DerivedEntityFactory.hpp"
+#include "TangramTransport.hpp"
+#include "LMCPSerializer.hpp"
 
 // Tangram Pro-generated messages
+/*
 #include "afrl/cmasi/AirVehicleState.hpp"
 #include "afrl/cmasi/CameraAction.hpp"
 #include "afrl/cmasi/CameraConfiguration.hpp"
 #include "afrl/cmasi/CameraState.hpp"
 #include "afrl/cmasi/GoToWaypointAction.hpp"
 #include "afrl/cmasi/MissionCommand.hpp"
+*/
+#include "hi/ethanToMichael.hpp"
+#include "hi/michaelToEthan.hpp"
+#include "hi/messageStruct.hpp"
+
 
 using namespace tangram;
 using namespace genericapi;
@@ -43,6 +56,7 @@ bool sendMessage(Message& m, std::shared_ptr<TangramTransport> tport, LMCPSerial
 
     return true;
 }
+
 
 bool recvMessage(
     Message& msg,
@@ -72,7 +86,6 @@ bool recvMessage(
 
 uint8_t recvEitherMessage(
     Message& msg1,
-    Message& msg2,
     std::shared_ptr<TangramTransport> tport,
     LMCPSerializer& ser
 ) {
@@ -81,7 +94,7 @@ uint8_t recvEitherMessage(
     buffer.resize(tport->getMaxReceiveSize());
     int32_t count = tport->recv(buffer.data(), buffer.size());
     if (count < 0) {
-        std::cerr << "Failed to receive bytes for " << msg1.getName() << " or " << msg2.getName() << std::endl;
+        std::cerr << "Failed to receive bytes for " << msg1.getName() << std::endl;
         return false;
     }
     buffer.resize(count);
@@ -90,10 +103,12 @@ uint8_t recvEitherMessage(
         std::cout << "Deserialized " << msg1.getName() << std::endl;
         return 1;
     }
+    /*
     if (ser.deserialize(buffer, msg2)) {
         std::cout << "Deserialized " << msg2.getName() << std::endl;
         return 2;
     }
+    */
 
     return 0;
 }
@@ -123,7 +138,7 @@ int main(int argc, char **argv) {
     maybe_value = std::getenv("TANGRAM_TRANSPORT_zeromq_transport_PORTS");
     if (maybe_value != nullptr) {
         std::string ports(maybe_value);
-
+ 
         // split the ports at the comma
         auto comma_pos = ports.find(",");
         if (comma_pos == std::string::npos) {
@@ -142,7 +157,8 @@ int main(int argc, char **argv) {
     }
 
     // Configure the factory & serializer
-    afrl::cmasi::DerivedEntityFactory factory;
+    //afrl::cmasi::DerivedEntityFactory factory;
+    hi::DerivedEntityFactory factory; 
     LMCPSerializer serializer(&factory);
 
     // Configure the transport
@@ -170,9 +186,9 @@ int main(int argc, char **argv) {
     std::cout << "Opened rx transport" << std::endl;
 
     // Subscribe to the topic that the message will come in on
-    rx->subscribe("afrl.cmasi.MissionCommand");
-    rx->subscribe("afrl.cmasi.GoToWaypointAction");
-    rx->subscribe("afrl.cmasi.CameraAction");
+    rx->subscribe("hi.ethanToMichael");
+    //rx->subscribe("afrl.cmasi.GoToWaypointAction");
+    //rx->subscribe("afrl.cmasi.CameraAction");
 
     // Give the transport time to initialize & connect to the proxy
     std::this_thread::sleep_for(10ms);
@@ -180,12 +196,32 @@ int main(int argc, char **argv) {
     // Message handling
     std::cout << "Waiting for first message..." << std::endl;
 
-    afrl::cmasi::MissionCommand mc;
-    afrl::cmasi::CameraAction ca;
-    auto msgid = recvEitherMessage(mc, ca, rx, serializer);
+    //afrl::cmasi::MissionCommand mc;
+    //afrl::cmasi::CameraAction ca;
+    
+    //auto msgid = recvEitherMessage(e2m, ca, rx, serializer);
+    hi::ethanToMichael e2m;
+    auto msgid = recvEitherMessage(e2m, rx, serializer);
     if (msgid == 1) {
-        std::cout << "Received MissionCommand" << std::endl;
+        std::cout << "Received ethanToMichael" << std::endl;
 
+
+        hi::messageStruct mess; 
+        mess.setNum(1.0, true);
+        
+        hi::michaelToEthan m2e;
+        m2e.setLocation(&mess, true);
+
+
+
+        if (!sendMessage(m2e, tx, serializer)) {
+            std::cerr << "Failed to send first AirVehicleState" << std::endl;
+            return 1;
+        }
+        std::cout << "Sent MichaelToEthan" << std::endl;
+
+
+        /*
         afrl::cmasi::AirVehicleState avs1;
         if (!sendMessage(avs1, tx, serializer)) {
             std::cerr << "Failed to send first AirVehicleState" << std::endl;
@@ -200,8 +236,12 @@ int main(int argc, char **argv) {
         if (gtw.getWaypointNumber() != mc.getWaypointList()[0]->getNumber()) {
             std::cerr << "Mismatch in MissionCommand <> GoToWaypointAction Waypoint Number" << std::endl;
             return 1;
-        }
+        }\
 
+        */
+
+
+        /*
         afrl::cmasi::AirVehicleState avs2;
         afrl::cmasi::Location3D loc;
         loc.setLatitude(mc.getWaypointList()[0]->getLatitude());
@@ -212,7 +252,10 @@ int main(int argc, char **argv) {
             return 1;
         }
         std::cout << "Sent second AirVehicleState" << std::endl;
-    } else if (msgid == 2) {
+        */
+    } 
+    /*
+    else if (msgid == 2) {
         std::cout << "Received first CameraAction" << std::endl;
 
         afrl::cmasi::CameraConfiguration cfg;
@@ -241,7 +284,9 @@ int main(int argc, char **argv) {
             return 1;
         }
         std::cout << "Sent CameraState" << std::endl;
-    } else {
+    } 
+    */
+   else {
         std::cerr << "Failed to receive a proper message to start any sequence" << std::endl;
         return 1;
     }

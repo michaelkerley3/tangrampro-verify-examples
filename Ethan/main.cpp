@@ -165,103 +165,32 @@ int main(int argc, char **argv) {
     std::cout << "Opened rx transport" << std::endl;
 
     // Subscribe to the topic that the message will come in on
-    rx->subscribe("hi.ethanToMichael");
+    rx->subscribe("hi.michaelToEthan");
 
 
     // Give the transport time to initialize & connect to the proxy
     std::this_thread::sleep_for(10ms);
 
-    // Message handling
-    std::cout << "Waiting for first message..." << std::endl;
 
 
-    //auto msgid = recvEitherMessage(e2m, ca, rx, serializer);
-    hi::ethanToMichael e2m;
-    auto msgid = recvEitherMessage(e2m, rx, serializer);
-    if (msgid == 1) {
-        std::cout << "Received ethanToMichael" << std::endl;
-
-
-        hi::messageStruct mess; 
-        mess.setNum(1.0, true);
+    hi::messageStruct mess; 
+    mess.setNum(1.0, true);
         
-        hi::michaelToEthan m2e;
-        m2e.setLocation(&mess, true);
+    hi::ethanToMichael e2m;
+    e2m.setWaypoint(&mess, true);
 
 
+    if (!sendMessage(e2m, tx, serializer)) {
+        std::cerr << "Failed to send first MichaelToEthan" << std::endl;
+        return 1;
+    }
+    std::cout << "Sent MichaelToEthan" << std::endl;
 
-        if (!sendMessage(m2e, tx, serializer)) {
-            std::cerr << "Failed to send first AirVehicleState" << std::endl;
-            return 1;
-        }
-        std::cout << "Sent MichaelToEthan" << std::endl;
-
-
-        /*
-        afrl::cmasi::AirVehicleState avs1;
-        if (!sendMessage(avs1, tx, serializer)) {
-            std::cerr << "Failed to send first AirVehicleState" << std::endl;
-            return 1;
-        }
-        std::cout << "Sent first AirVehicleState" << std::endl;
-
-        afrl::cmasi::GoToWaypointAction gtw;
-        recvMessage(gtw, rx, serializer);
-        std::cout << "Received GoToWaypointAction" << std::endl;
-
-        if (gtw.getWaypointNumber() != mc.getWaypointList()[0]->getNumber()) {
-            std::cerr << "Mismatch in MissionCommand <> GoToWaypointAction Waypoint Number" << std::endl;
-            return 1;
-        }\
-
-        */
-
-
-        /*
-        afrl::cmasi::AirVehicleState avs2;
-        afrl::cmasi::Location3D loc;
-        loc.setLatitude(mc.getWaypointList()[0]->getLatitude());
-        loc.setLongitude(mc.getWaypointList()[0]->getLongitude());
-        avs2.setLocation(&loc);
-        if (!sendMessage(avs2, tx, serializer)) {
-            std::cerr << "Failed to send second AirVehicleState" << std::endl;
-            return 1;
-        }
-        std::cout << "Sent second AirVehicleState" << std::endl;
-        */
+    hi::michaelToEthan m2e;
+    auto msgid = recvEitherMessage(m2e, rx, serializer);
+    if (msgid == 1) {
+        std::cout << "Received michaelToEthan" << std::endl;
     } 
-    /*
-    else if (msgid == 2) {
-        std::cout << "Received first CameraAction" << std::endl;
-
-        afrl::cmasi::CameraConfiguration cfg;
-        cfg.setMinHorizontalFieldOfView(20);
-        cfg.setMaxHorizontalFieldOfView(150);
-        if (!sendMessage(cfg, tx, serializer)) {
-            std::cerr << "Failed to send CameraConfiguration" << std::endl;
-            return 1;
-        }
-        std::cout << "Sent CameraConfiguration" << std::endl;
-
-        afrl::cmasi::CameraAction act;
-        recvMessage(act, rx, serializer);
-        std::cout << "Received second CameraAction" << std::endl;
-
-        auto fov = act.getHorizontalFieldOfView();
-        if (fov < 20 || fov > 150) {
-            std::cerr << "CameraAction request out of bounds" << std::endl;
-            return 1;
-        }
-
-        afrl::cmasi::CameraState state;
-        state.setHorizontalFieldOfView(fov);
-        if (!sendMessage(state, tx, serializer)) {
-            std::cerr << "Failed to send CameraState" << std::endl;
-            return 1;
-        }
-        std::cout << "Sent CameraState" << std::endl;
-    } 
-    */
    else {
         std::cerr << "Failed to receive a proper message to start any sequence" << std::endl;
         return 1;

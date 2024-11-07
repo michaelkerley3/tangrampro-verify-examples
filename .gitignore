@@ -1,0 +1,5 @@
+mission_computer/code-gen/beautify.sh
+mission_computer/code-gen/
+.vscode/c_cpp_properties.json
+.vscode/settings.json
+.vscode/tasks.json

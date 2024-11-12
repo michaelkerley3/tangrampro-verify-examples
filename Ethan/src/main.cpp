@@ -32,7 +32,7 @@ bool sendMessage(Message& m, std::shared_ptr<TangramTransport> tport, LMCPSerial
         return false;
     }
 
-    std::string topic = "afrl.cmasi." + m.getName();
+    std::string topic = "eM"; //"afrl.cmasi." + m.getName();
 
     if (!tport->publish(buffer.data(), buffer.size(), topic)) {
         std::cerr << "Failed to publish message " << m.getName() << std::endl;
@@ -43,33 +43,7 @@ bool sendMessage(Message& m, std::shared_ptr<TangramTransport> tport, LMCPSerial
 }
 
 
-bool recvMessage(
-    Message& msg,
-    std::shared_ptr<TangramTransport> tport,
-    LMCPSerializer& ser
-) {
-    static std::vector<uint8_t> buffer;
-
-    buffer.resize(tport->getMaxReceiveSize());
-    int32_t count = tport->recv(buffer.data(), buffer.size());
-    if (count < 0) {
-        std::cerr << "Failed to receive bytes for " << msg.getName() << std::endl;
-        return false;
-    }
-    buffer.resize(count);
-    std::cout << "Received bytes for " << msg.getName() << std::endl;
-
-    if (ser.deserialize(buffer, msg)) {
-        std::cout << "Deserialized " << msg.getName() << std::endl;
-        return true;
-    } else {
-        std::cerr << "Failed to deser " << msg.getName() << std::endl;
-    }
-
-    return false;
-}
-
-uint8_t recvEitherMessage(
+uint8_t reciveMessages(
     Message& msg1,
     std::shared_ptr<TangramTransport> tport,
     LMCPSerializer& ser
@@ -91,6 +65,10 @@ uint8_t recvEitherMessage(
 
     return 0;
 }
+
+
+
+
 
 int main(int argc, char **argv) {
     // Collect args
@@ -187,7 +165,7 @@ int main(int argc, char **argv) {
     std::cout << "Sent MichaelToEthan" << std::endl;
 
     hi::michaelToEthan m2e;
-    auto msgid = recvEitherMessage(m2e, rx, serializer);
+    auto msgid = reciveMessages(m2e, rx, serializer);
     if (msgid == 1) {
         std::cout << "Received michaelToEthan" << std::endl;
     } 
@@ -198,3 +176,32 @@ int main(int argc, char **argv) {
 
     return 0;
 }
+
+
+/*
+bool recvMessage(
+    Message& msg,
+    std::shared_ptr<TangramTransport> tport,
+    LMCPSerializer& ser
+) {
+    static std::vector<uint8_t> buffer;
+
+    buffer.resize(tport->getMaxReceiveSize());
+    int32_t count = tport->recv(buffer.data(), buffer.size());
+    if (count < 0) {
+        std::cerr << "Failed to receive bytes for " << msg.getName() << std::endl;
+        return false;
+    }
+    buffer.resize(count);
+    std::cout << "Received bytes for " << msg.getName() << std::endl;
+
+    if (ser.deserialize(buffer, msg)) {
+        std::cout << "Deserialized " << msg.getName() << std::endl;
+        return true;
+    } else {
+        std::cerr << "Failed to deser " << msg.getName() << std::endl;
+    }
+
+    return false;
+}
+*/

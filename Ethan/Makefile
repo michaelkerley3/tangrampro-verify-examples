@@ -1,36 +1,28 @@
-# C++ compiler to use
-CXX = g++
+CC=gcc
+CXX=g++
+CPPFLAGS=  -Wall -Wpointer-arith \
+                   -Wwrite-strings -Wcast-qual -Wcast-align -Wformat-security \
+                   -pedantic-errors -fstack-protector-all \
+                   -fPIC -std=c++11 -pthread -Wno-deprecated-declarations
 
-# Where code-gen artifacts are after they've been compiled
-CODEGEN ?= $(PWD)/code-gen
-CG_INSTALL = $(CODEGEN)/local_install/
+ROOTDIR=$(shell pwd)
+SRCDIR=$(ROOTDIR)/src
+CSIINC=$(ROOTDIR)/code-gen/include
+GENERICAPIINC=$(ROOTDIR)/code-gen/local_install/include/tangramgenericapicpp
+TRANSPORTINC=$(ROOTDIR)/code-gen/local_install/include/tangramTransports/base
+SERIALINC=$(ROOTDIR)/code-gen/local_install/include/tangramlmcpserializer
+RANDINC=$(ROOTDIR)/code-gen/local_install/include/tangramrandpopulater
+SRCS:=$(shell find $(SRCDIR) -name '*.cpp')
+OBJS:=$(SRCS:%=$(OBJDIR)/%.o)
+LIBS=-l:libtangramgeneric.a -l:libtangramgenericapi.a -l:libtangramrandpopulater.a -l:libtangramlmcpserializer.a -lzmq -l:libtangram_transport.so
+LDFLAGS=-L$(ROOTDIR)/code-gen/build/libs -L$(ROOTDIR)/code-gen/local_install/lib $(LIBS)
 
-# Include headers from Tangram libraries
-INCLUDES = -I $(CG_INSTALL)/include \
-		   -I $(CG_INSTALL)/include/tangramgenericapi/include \
-		   -I $(CG_INSTALL)/include/tangramgenericapicpp \
-		   -I $(CG_INSTALL)/include/tangramlmcpserializer \
-		   -I $(CG_INSTALL)/include/tangramTransports/base \
-		   -I $(CODEGEN)/include
 
-# Include directories where Tangram libraries can be found
-LIBDIRS =  -L $(CG_INSTALL)/lib
+INCLUDES=-I$(CSIINC) -Iinclude -I$(GENERICAPIINC) -I$(TRANSPORTINC) -I$(SERIALINC) -I$(RANDINC)
 
-# Link to the libraries we need
-LIBS =     -l tangramgeneric \
-		   -l tangramgenericapi \
-		   -l tangramlmcpserializer \
-		   -l tangram_transport \
-		   -l zmq \
-		   -l pthread
+Ethan : $(OBJS)
+	$(CXX) $(INCLUDES) $(OBJS) -o $@ $(LDFLAGS)
 
-NAME = simple
-
-# Build the executable
-.PHONY: allltangramgeneric
-all: main.cpp
-	$(CXX) $(INCLUDES) -o $(NAME) main.cpp $(LIBDIRS) $(LIBS)
-
-.PHONY: clean
-clean:
-	rm -rf $(NAME)
+$(OBJDIR)/%.cpp.o: %.cpp
+	mkdir -p $(dir $@)
+	$(CXX) $(INCLUDES) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@

@@ -32,7 +32,7 @@ bool sendMessage(Message& m, std::shared_ptr<TangramTransport> tport, LMCPSerial
         return false;
     }
 
-    std::string topic = "eM"; //"afrl.cmasi." + m.getName();
+    std::string topic = "e2m"; //"afrl.cmasi." + m.getName();
 
     if (!tport->publish(buffer.data(), buffer.size(), topic)) {
         std::cerr << "Failed to publish message " << m.getName() << std::endl;
@@ -42,7 +42,7 @@ bool sendMessage(Message& m, std::shared_ptr<TangramTransport> tport, LMCPSerial
     return true;
 }
 
-
+/*
 uint8_t reciveMessages(
     Message& msg1,
     std::shared_ptr<TangramTransport> tport,
@@ -65,7 +65,7 @@ uint8_t reciveMessages(
 
     return 0;
 }
-
+*/
 
 
 
@@ -126,10 +126,10 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
-    rx->setOption("SubscribeIP", ip);
-    rx->setOption("SubscribePort", sub_port);
+    //rx->setOption("SubscribeIP", ip);
+    //rx->setOption("SubscribePort", sub_port);
     tx->setOption("PublishIP", ip);
-    tx->setOption("PublishPort", pub_port);
+    tx->setOption("PublishPort", "6668");
 
     if (-1 == tx->open(TTF_WRITE)) {
         std::cerr << "Failed to open tx transport" << std::endl;
@@ -143,27 +143,27 @@ int main(int argc, char **argv) {
     std::cout << "Opened rx transport" << std::endl;
 
     // Subscribe to the topic that the message will come in on
-    rx->subscribe("hi.michaelToEthan");
+    //rx->subscribe("hi.6667");
 
 
     // Give the transport time to initialize & connect to the proxy
-    //std::this_thread::sleep_for(10ms);
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    
 
-
+    //sending messages
     hi::messageStruct mess; 
     mess.setNum(1.0, true);
-        
     hi::ethanToMichael e2m;
     e2m.setWaypoint(&mess, true);
-
-
     if (!sendMessage(e2m, tx, serializer)) {
         std::cerr << "Failed to send first MichaelToEthan" << std::endl;
         return 1;
     }
     std::cout << "Sent MichaelToEthan" << std::endl;
+    
 
+    /*
+    //reciving messages
     hi::michaelToEthan m2e;
     auto msgid = reciveMessages(m2e, rx, serializer);
     if (msgid == 1) {
@@ -173,7 +173,7 @@ int main(int argc, char **argv) {
         std::cerr << "Failed to receive a proper message to start any sequence" << std::endl;
         return 1;
     }
-
+    */
     return 0;
 }
 

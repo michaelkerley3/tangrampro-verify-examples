@@ -1,139 +1,234 @@
-#include <unistd.h>
-#include <stdio.h>
-#include <vector>
+#include <chrono>
+#include <iostream>
+#include <memory>
 #include <thread>
-#include <chrono>
-#if defined(WRITE_TO_FILE) || defined(READ_FROM_FILE)
-#include <fstream>
-#include <sys/stat.h>
 
-#endif
-#include <chrono>
-#include <cstdlib>
-// Message of interest
-// Tangram Pro-generated messages
-#include "hi/ethanToMichael.hpp"
-#include "hi/michaelToEthan.hpp"
-#include "hi/messageStruct.hpp"
-
-// Generic transport
 #include "TangramTransport.hpp"
-static tangram::transport::TangramTransport *transport = nullptr;
-
+#include "TangramTransportZMQ.hpp"
+#include "DirectSerializer.hpp"
 #include "hi_DerivedEntityFactory.hpp"
 
+#include "hi/ethanToMichael.hpp"
+#include "hi/michaelToEthan.hpp"
 
-#include "LMCPSerializer.hpp"
+using namespace tangram;
+using namespace genericapi;
+using namespace serializers;
+using namespace transport;
 
+int init_transports(std::shared_ptr<TangramTransport> &tx, std::shared_ptr<TangramTransport> &rx, bool addSubs = true);
+bool sendMessage(Message &m, std::shared_ptr<TangramTransport> tport, DirectSerializer &ser);
+bool recvMessage(Message &msg, std::shared_ptr<TangramTransport> tport, DirectSerializer &ser);
+int add_subscriptions(std::shared_ptr<TangramTransport> &rx);
+int handle_messages(std::shared_ptr<TangramTransport> &tx, std::shared_ptr<TangramTransport> &rx, DirectSerializer &ser);
 
-//******************************************************************************
-/**
- * @brief This function initializes whatever the generic transport is and
- *        configures it statically (without the config file).  Note that a lot
- *        of what's in this function can go away if file-based configuration is
- *        used instead.fffff
- *
- * @return int 0 on success or -1 on error.
- */
-static int initTransport(uint64_t flags) {
-    // create the transport object
-    transport = tangram::transport::TangramTransport::createTransport();
-    if (nullptr == transport) {
-        fprintf(stderr, "Could not create trffansport!\n");
-        return -1;
-    }
-    std::string hostname = "127.0.0.1";
+int main()
+{
+    std::cout << "Starting component" << std::endl;
 
-    char* hn = std::getenv("TANGRAM_TRANSPORT_zeromq_transport_HOSTNAME");
-    printf("Hostname: %s\n", hn);
-    if(hn)
+    std::shared_ptr<TangramTransport> tx;
+    std::shared_ptr<TangramTransport> rx;
+    if (init_transports(tx, rx) != 0)
     {
-
-        hostname.assign(hn);
+        std::cerr << "Failed to initialize transports" << std::endl;
+        exit(1);
     }
-    // the ports must match when testing on tangram (runnign without zmq proxy)
-    transport->resetTransportOptions();
-    transport->setOption("PublishIP", hostname);
-    transport->setOption("PublishPort", "6667"); 
-    transport->setOption("SubscribeIP", hostname);
-    transport->setOption("SubscribePort", "6668");
-    transport->setOption("PublishID", "0");
-    // open it
-    if (transport->open(flags) == -1) {
-        fprintf(stderr, "Could not open transport!\n");
-        return -1;
+
+    hi::DerivedEntityFactory factory;
+    DirectSerializer serializer(&factory);
+
+    auto ret = handle_messages(tx, rx, serializer);
+    if (ret != 0)
+    {
+        std::cout << "Early exit while handling messages: " << ret << std::endl;
+        return ret;
+    }
+
+    std::cout << "Done handling messages" << std::endl;
+
+#ifdef DO_END_SLEEP
+    std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+#endif
+}
+
+int init_transports(
+    std::shared_ptr<TangramTransport> &tx,
+    std::shared_ptr<TangramTransport> &rx,
+    bool addSubs)
+{
+    TangramTransport::resetTransportOptions();
+
+    // Configure the transport
+    tx = std::make_shared<TangramTransportZMQ>();
+    rx = std::make_shared<TangramTransportZMQ>();
+    if (tx == nullptr || rx == nullptr)
+    {
+        std::cerr << "Failed to create transport" << std::endl;
+        exit(1);
+    }
+
+    std::string ip = "127.0.0.1";
+    std::string sub_port = "6667";
+    std::string pub_port = "6668";
+
+    char *maybe_value = std::getenv("TANGRAM_TRANSPORT_zeromq_transport_HOSTNAME");
+    if (maybe_value != nullptr)
+    {
+        ip = maybe_value;
+        std::cout << "Using env hostname" << std::endl;
+    }
+
+    maybe_value = std::getenv("TANGRAM_TRANSPORT_zeromq_transport_PORTS");
+    if (maybe_value != nullptr)
+    {
+        std::string ports(maybe_value);
+        std::cout << "Using env ports" << std::endl;
+
+        // split the ports at the comma
+        auto comma_pos = ports.find(",");
+        if (comma_pos == std::string::npos)
+        {
+            std::cerr << "Unexpected lack of comma in PORTS env variable" << std::endl;
+        }
+        else
+        {
+            // Pub port, then sub port, because it should be reversed from the proxy
+            // (Proxy in platform will sub on 6667, and pub on 6668)
+            pub_port = ports.substr(0, comma_pos);
+            sub_port = ports.substr(comma_pos + 1);
+        }
+    }
+
+    std::cout << "Using IP " << ip << std::endl;
+    std::cout << "Using Sub Port " << sub_port << std::endl;
+    std::cout << "Using Pub Port " << pub_port << std::endl;
+
+    rx->setOption("SubscribeIP", ip);
+    rx->setOption("SubscribePort", sub_port);
+    tx->setOption("PublishIP", ip);
+    tx->setOption("PublishPort", pub_port);
+
+    if (-1 == tx->open(TTF_WRITE))
+    {
+        std::cerr << "Failed to open tx transport" << std::endl;
+        return 1;
+    }
+    std::cout << "Opened tx transport" << std::endl;
+    if (-1 == rx->open(TTF_READ | TTF_BROKERLESS))
+    {
+        std::cerr << "Failed to open rx transport" << std::endl;
+        return 1;
+    }
+    std::cout << "Opened rx transport" << std::endl;
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+    if (addSubs)
+    {
+        add_subscriptions(rx);
     }
 
     return 0;
 }
 
-//******************************************************************************
-int main(int argc, char *argv[]) {
+bool sendMessage(Message &m, std::shared_ptr<TangramTransport> tport, DirectSerializer &ser)
+{
+    static std::vector<uint8_t> buffer;
 
-    // setup the transport
-    if (initTransport(TTF_WRITE) != 0) {
-        fprintf(stderr, "Transport initialization failed!\n");
-        exit(1);
+    buffer.clear();
+
+    if (!ser.serialize(m, buffer))
+    {
+        std::cerr << "Failed to serialize message " << m.getName() << std::endl;
+        return false;
     }
 
-    // some transports require a brief delay between initialization and sending
-    // of data
-    sleep(1);
+    std::string topic = "messages." + m.getName();
 
-    // the message object
-    //afrl::cmasi::AirVehicleState msg;
-
-
-    // initialize the serializer
-    tangram::serializers::Serializer *serializer;
-    hi::DerivedEntityFactory derivedEntityFactory;
-
-     tangram::serializers::LMCPSerializer lmcpSerializer(&derivedEntityFactory);
-     serializer = &lmcpSerializer;
-
-
-
-    // dump the message to the console
-    //mess.dump();
-
-    //Initialize Message
-    hi::messageStruct mess; 
-    mess.setNum(1.0, true);
-
-    hi::ethanToMichael e2m;
-    e2m.setWaypoint(&mess, true);
-    
-    e2m.dump();
-
-
-    while(true) {
-
-        std::vector<uint8_t> bytes;
-        if (!serializer->serialize(e2m, bytes)) 
-        {
-            transport->close();
-            delete transport;
-            fprintf(stderr, "Failed to serialize message.\n");
-            _exit(1);
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(250));
-
-
-        if (transport->publish(&bytes[0], bytes.size(), "e2m", 0) < 0) 
-        {
-            fprintf(stderr, "Failed to publish message.\n");
-            transport->close();
-            delete transport;
-            _exit(1);
-        }
-        fprintf(stderr, "SentMessage\n");
+    if (!tport->publish(buffer.data(), buffer.size(), topic))
+    {
+        std::cerr << "Failed to publish message " << m.getName() << std::endl;
+        return false;
     }
-    sleep(2);
+    std::cout << "Sent message to: " << topic << std::endl;
 
-    printf("Closing transport.\n");
-    transport->close();
-    delete transport;
+    return true;
+}
 
-    printf("Done\n");
+bool recvMessage(
+    Message &msg,
+    std::shared_ptr<TangramTransport> tport,
+    DirectSerializer &ser)
+{
+    static std::vector<uint8_t> buffer;
+
+    buffer.resize(tport->getMaxReceiveSize());
+    int32_t count = tport->recv(buffer.data(), buffer.size());
+    if (count < 0)
+    {
+        std::cerr << "Failed to receive bytes for " << msg.getName() << std::endl;
+        return false;
+    }
+    buffer.resize(count);
+    std::cout << "Received bytes for " << msg.getName() << std::endl;
+
+    if (ser.deserialize(buffer, msg))
+    {
+        std::cout << "Deserialized " << msg.getName() << std::endl;
+        return true;
+    }
+    else
+    {
+        std::cerr << "Failed to deser " << msg.getName() << std::endl;
+    }
+
+    return false;
+}
+
+int add_subscriptions(std::shared_ptr<TangramTransport> &rx)
+{
+    rx->subscribe("messages.RequestNumber");
+    rx->subscribe("messages.michaelToEthan");
+    std::cout << "Subscribed to messages.RequestNumber" << std::endl;
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    return 0;
+}
+
+int handle_messages(
+    std::shared_ptr<TangramTransport> &tx,
+    std::shared_ptr<TangramTransport> &rx,
+    DirectSerializer &ser)
+{
+    while (true)
+    {
+        hi::michaelToEthan ovrsr3;
+        hi::ethanToMichael ovrsr4;
+
+        try
+        {
+            if (!sendMessage(ovrsr4, tx, ser))
+            {
+                std::cerr << "sendMessage failed" << std::endl;
+            }
+        }
+        catch (const std::exception &e)
+        {
+            std::cerr << "Exception in sendMessage: " << e.what() << std::endl;
+        }
+
+        try
+        {
+            if (!recvMessage(ovrsr3, rx, ser))
+            {
+                std::cerr << "recvMessage failed" << std::endl;
+                return 1;
+            }
+        }
+        catch (const std::exception &e)
+        {
+            std::cerr << "Exception in recvMessage: " << e.what() << std::endl;
+        }
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     return 0;
 }

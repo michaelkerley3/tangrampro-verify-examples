@@ -10,17 +10,18 @@ SRCDIR=$(ROOTDIR)/src
 CSIINC=$(ROOTDIR)/code-gen/include
 GENERICAPIINC=$(ROOTDIR)/code-gen/local_install/include/tangramgenericapicpp
 TRANSPORTINC=$(ROOTDIR)/code-gen/local_install/include/tangramTransports/base
-SERIALINC=$(ROOTDIR)/code-gen/local_install/include/tangramlmcpserializer
+TRANSPORTZMQINC=$(ROOTDIR)/code-gen/local_install/include/tangramTransports/zmq
+SERIALINC=$(ROOTDIR)/code-gen/local_install/include/tangramdirectserializer
 RANDINC=$(ROOTDIR)/code-gen/local_install/include/tangramrandpopulater
 SRCS:=$(shell find $(SRCDIR) -name '*.cpp')
 OBJS:=$(SRCS:%=$(OBJDIR)/%.o)
-LIBS=-l:libtangramgeneric.a -l:libtangramgenericapi.a -l:libtangramrandpopulater.a -l:libtangramlmcpserializer.a -lzmq -l:libtangram_transport.so
+LIBS=-l:libtangramgeneric.a -l:libtangramgenericapi.a -l:libtangramrandpopulater.a -l:libtangramdirectserializer.a -lzmq -l:libtangram_transport.so
 LDFLAGS=-L$(ROOTDIR)/code-gen/build/libs -L$(ROOTDIR)/code-gen/local_install/lib $(LIBS)
 
 
-INCLUDES=-I$(CSIINC) -Iinclude -I$(GENERICAPIINC) -I$(TRANSPORTINC) -I$(SERIALINC) -I$(RANDINC)
+INCLUDES=-I$(CSIINC) -Iinclude -I$(GENERICAPIINC) -I$(TRANSPORTINC) -I$(TRANSPORTZMQINC) -I$(SERIALINC) -I$(RANDINC)
 
-Ethan : $(OBJS)
+ethan : $(OBJS)
 	$(CXX) $(INCLUDES) $(OBJS) -o $@ $(LDFLAGS)
 
 $(OBJDIR)/%.cpp.o: %.cpp

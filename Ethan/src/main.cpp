@@ -31,7 +31,7 @@ static tangram::transport::TangramTransport *transport = nullptr;
  * @brief This function initializes whatever the generic transport is and
  *        configures it statically (without the config file).  Note that a lot
  *        of what's in this function can go away if file-based configuration is
- *        used instead.
+ *        used instead.fffff
  *
  * @return int 0 on success or -1 on error.
  */
@@ -39,7 +39,7 @@ static int initTransport(uint64_t flags) {
     // create the transport object
     transport = tangram::transport::TangramTransport::createTransport();
     if (nullptr == transport) {
-        fprintf(stderr, "Could not create transport!\n");
+        fprintf(stderr, "Could not create trffansport!\n");
         return -1;
     }
     std::string hostname = "127.0.0.1";
@@ -51,9 +51,10 @@ static int initTransport(uint64_t flags) {
 
         hostname.assign(hn);
     }
+    // the ports must match when testing on tangram (runnign without zmq proxy)
     transport->resetTransportOptions();
     transport->setOption("PublishIP", hostname);
-    transport->setOption("PublishPort", "6667");
+    transport->setOption("PublishPort", "6667"); 
     transport->setOption("SubscribeIP", hostname);
     transport->setOption("SubscribePort", "6668");
     transport->setOption("PublishID", "0");

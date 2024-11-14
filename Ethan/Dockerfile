@@ -10,7 +10,8 @@ WORKDIR /component
 
 RUN pwd
 
-COPY Ethan/code-gen/ /component/code-gen/
+#COPY Ethan/code-gen/ /component/code-gen/
+COPY code-gen/ code-gen/
 RUN cd code-gen && make clean && make -j && make install
 
 RUN pwd

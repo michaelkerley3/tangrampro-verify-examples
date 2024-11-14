@@ -22,7 +22,7 @@ RUN pwd
 
 ENV LD_LIBRARY_PATH=/component/code-gen/local_install/lib
 
-RUN make -j
+RUN sudo make -j
 
 ENTRYPOINT ["./ethan"]
 

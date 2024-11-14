@@ -68,8 +68,11 @@ int init_transports(
     }
 
     std::string ip = "127.0.0.1";
-    std::string sub_port = "6667";
-    std::string pub_port = "6668";
+    //std::string sub_port = "6667";
+    //std::string pub_port = "6668";
+    //ports need to match when testing through tangram
+    std::string sub_port = "6668";
+    std::string pub_port = "6667";
 
     char *maybe_value = std::getenv("TANGRAM_TRANSPORT_zeromq_transport_HOSTNAME");
     if (maybe_value != nullptr)
@@ -114,7 +117,10 @@ int init_transports(
         return 1;
     }
     std::cout << "Opened tx transport" << std::endl;
-    if (-1 == rx->open(TTF_READ | TTF_BROKERLESS))
+
+        // To run on tangram rx->open(TTF_READ))
+    // To run on local rx->open(TTF_READ | TTF_BROKERLESS)
+    if (-1 == rx->open(TTF_READ))
     {
         std::cerr << "Failed to open rx transport" << std::endl;
         return 1;

@@ -15,6 +15,8 @@ RUN cd code-gen && make clean && make -j && make install
 
 RUN pwd
 
+RUN cd..
+
 COPY Ethan/src/main.cpp /component/src/main.cpp
 COPY Ethan/Makefile /component/Makefile
 COPY Ethan/build.sh /component/build.sh

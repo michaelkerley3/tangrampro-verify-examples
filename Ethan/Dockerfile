@@ -11,12 +11,12 @@ WORKDIR /component
 RUN pwd
 
 #COPY Ethan/code-gen/ /component/code-gen/
-COPY code-gen/ code-gen/
+COPY code-gen/ /component/code-gen/
 RUN cd code-gen && make clean && make -j && make install
 
 RUN pwd
 
-RUN cd..
+RUN cd ..
 
 COPY Ethan/src/main.cpp /component/src/main.cpp
 COPY Ethan/Makefile /component/Makefile
